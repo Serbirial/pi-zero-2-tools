@@ -75,7 +75,7 @@ async def message_edit_task():
         cpu = f'{round(bot.process.cpu_percent() / psutil.cpu_count(), 1)}% ({psutil.cpu_count()} core/s)'
         totalDisk, usedDisk, freeDisk = shutil.disk_usage("/")
         
-        disk = f"Total: {totalDisk/ (1024 ** 3):.2f}\nUsed: {usedDisk/ (1024 ** 3):.2f}\nFree: {freeDisk/ (1024 ** 3):.2f}"
+        disk = f"Total: {totalDisk/ (1024 ** 3):.2f}Gb\nUsed: {usedDisk/ (1024 ** 3):.2f}Gb\nFree: {freeDisk/ (1024 ** 3):.2f}Gb"
         used = round(psutil.virtual_memory()[3] / 1024**2)
         total = round(psutil.virtual_memory().total / 1024**2)
         ram = f'Bot: {round(bot.process.memory_full_info().rss / 1024**2)}MB\nGlobal usage: {used}MB/{total}MB ({total-used}MB free)'
