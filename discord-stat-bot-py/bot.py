@@ -64,4 +64,4 @@ async def my_background_task():
     await channel.send(embed=embed)
 
 
-bot.run(open("token.txt", "r").readline(1))
+bot.run(open("token.txt", "r").readline())
