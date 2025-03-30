@@ -6,6 +6,7 @@ import psutil
 import platform
 import datetime
 import os
+import shutil
 from discord.ext import commands, tasks
 
 intents = discord.Intents.default()
@@ -37,6 +38,9 @@ async def on_ready():
         
     if not bot.stats_message:
         cpu = f'{round(bot.process.cpu_percent() / psutil.cpu_count(), 1)}% ({psutil.cpu_count()} core/s)'
+        totalDisk, usedDisk, freeDisk = shutil.disk_usage("/")
+        
+        disk = f"Total: {totalDisk/ (1024 ** 3):.2f}\nUsed: {usedDisk/ (1024 ** 3):.2f}\nFree: {freeDisk/ (1024 ** 3):.2f}"
         used = round(psutil.virtual_memory()[3] / 1024**2)
         total = round(psutil.virtual_memory().total / 1024**2)
         ram = f'Bot: {round(bot.process.memory_full_info().rss / 1024**2)}MB\nGlobal usage: {used}MB/{total}MB ({total-used}MB free)'
@@ -58,6 +62,7 @@ async def on_ready():
         embed = discord.Embed(description="Bot stats")
         embed.add_field(name="RAM", value=ram, inline=False)
         embed.add_field(name="CPU", value=cpu, inline=False)
+        embed.add_field(name="Disk", value=disk, inline=False)
         embed.add_field(name="OS", value=distro, inline=True)
         embed.add_field(name="Python", value=pythoninfo, inline=True)
         embed.add_field(name="Guilds:Users", value=f'{len(bot.guilds)}:{len(bot.users)}', inline=False)
