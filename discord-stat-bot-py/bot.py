@@ -9,22 +9,21 @@ import os
 from discord.ext import commands, tasks
 
 intents = discord.Intents.default()
-intents.members = False
 intents.guilds = True
 intents.dm_messages = False
 intents.emojis = False
 intents.bans = False
-intents.presences = False
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='?', intents=intents)
 bot.process = psutil.Process()
 
 bot.stats_message = None
-channel = bot.get_guild(1355803790774767646).get_channel(1355803790774767646)
+channel = None
 
 @bot.event
 async def on_ready():
+    bot.channel = bot.get_guild(1355803790774767646).get_channel(1355803790774767646)
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     if not hasattr(bot, 'uptime'):  # Track Uptime
         bot.uptime = datetime.datetime.utcnow()
