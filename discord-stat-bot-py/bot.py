@@ -23,7 +23,8 @@ channel = None
 
 @bot.event
 async def on_ready():
-    bot.channel = bot.get_guild(1355803790774767646).get_channel(1355803790774767646)
+    guild = bot.get_guild(1353806073999396986)
+    channel = bot.get_channel(1355803790774767646)
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     if not hasattr(bot, 'uptime'):  # Track Uptime
         bot.uptime = datetime.datetime.utcnow()
