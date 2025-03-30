@@ -64,12 +64,6 @@ async def on_ready():
         embed.add_field(name="Uptime", value=f"I have been running for {uptime.format(d=days, h=hours, m=minutes, s=seconds)}", inline=False)
         bot.stats_message = await channel.send(embed=embed)
 
-
-@bot.command()
-async def test(ctx):
-    """None"""
-    pass
-
 @tasks.loop(seconds=3)
 async def message_edit_task():
     if bot.stats_message != None:
