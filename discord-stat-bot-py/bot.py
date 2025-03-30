@@ -10,6 +10,7 @@ from discord.ext import commands, tasks
 
 intents = discord.Intents.default()
 intents.members = False
+intents.guilds = True
 intents.dm_messages = False
 intents.emojis = False
 intents.bans = False
@@ -20,7 +21,7 @@ bot = commands.Bot(command_prefix='?', intents=intents)
 bot.process = psutil.Process()
 
 bot.stats_message = None
-channel = bot.get_channel(1355803790774767646)
+channel = bot.get_guild(1355803790774767646).get_channel(1355803790774767646)
 
 @bot.event
 async def on_ready():
