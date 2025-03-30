@@ -30,8 +30,7 @@ async def on_ready():
         bot.uptime = datetime.datetime.utcnow()
     message_edit_task.start()
     print('------')
-    messages = channel.history(limit=10)
-    for message in messages:
+    async for message in channel.history(limit=10):
         if message.author.id == bot.user.id:
             bot.stats_message = message
             break
