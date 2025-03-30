@@ -39,7 +39,7 @@ async def on_ready():
         distro = f"Running on {data['NAME']}"
     else:
         distro = "Running on some windows machine..."
-    delta = datetime.utcnow() - bot.uptime
+    delta = datetime.datetime.utcnow() - bot.uptime
     hours, remainder = divmod(int(delta.total_seconds()), 3600)
     minutes, seconds = divmod(remainder, 60)
     days, hours = divmod(hours, 24)
@@ -75,7 +75,7 @@ async def message_edit_task():
         distro = f"Running on {data['NAME']}"
     else:
         distro = "Running on some windows machine..."
-    delta = datetime.utcnow() - bot.uptime
+    delta = datetime.datetime.utcnow() - bot.uptime
     hours, remainder = divmod(int(delta.total_seconds()), 3600)
     minutes, seconds = divmod(remainder, 60)
     days, hours = divmod(hours, 24)
