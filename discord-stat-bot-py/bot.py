@@ -16,7 +16,7 @@ intents.emojis = False
 intents.bans = False
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='?', intents=intents)
+bot = commands.Bot(command_prefix='?', intents=intents, max_messages=None)
 bot.process = psutil.Process()
 
 bot.stats_message = None
