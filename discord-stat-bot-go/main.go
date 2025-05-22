@@ -164,8 +164,10 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		fmt.Println("Failed to monitor process:", err)
 	}
 
-	monitorStr := fmt.Sprintf("Music bot 1:\n		CPU: %.1f%%\n		Memory: %.2f MB\nMusic bot 2:\n		CPU: %.1f%%\n		Memory: %.2f MB\nMusic Server:\n		CPU: %.1f%%\n		Memory: %.2f MB\n",
-		botcpu, float64(botmem)/1024/1024, bot2cpu, float64(bot2mem)/1024/1024, wscpu, float64(wsmem)/1024/1024)
+	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic bot 2:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
+		botcpu, float64(botmem)/1024/1024,
+		bot2cpu, float64(bot2mem)/1024/1024,
+		wscpu, float64(wsmem)/1024/1024)
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
