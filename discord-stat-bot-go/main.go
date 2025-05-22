@@ -23,6 +23,8 @@ var (
 	botUserID    string
 )
 
+var botproc, bot2proc, wsproc *process.Process
+
 func findProcessByCmdline(targetCmd string) (*process.Process, error) {
 	procs, err := process.Processes()
 	if err != nil {
@@ -85,6 +87,24 @@ func onReady(s *discordgo.Session, r *discordgo.Ready) {
 	botUserID = r.User.ID
 	fmt.Printf("Logged in as: %s#%s\n", r.User.Username, r.User.Discriminator)
 
+	// Cache the processes
+	targetCmd := "./ascension -remote-ws"
+	targetCmd2 := "./ascension -remote-ws -token token-boys.txt"
+	targetCmd3 := "./ascension -ws-only"
+	var err error
+	botproc, err = findProcessByCmdline(targetCmd)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+	bot2proc, err = findProcessByCmdline(targetCmd2)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+	wsproc, err = findProcessByCmdline(targetCmd3)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+
 	// Attempt to find existing stats message
 	messages, err := s.ChannelMessages(ChannelID, 10, "", "", "")
 	if err == nil {
@@ -134,22 +154,6 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 	c, _ := cpu.Percent(0, false)
 	d, _ := disk.Usage("/")
 	uptime := time.Since(botStartTime)
-
-	targetCmd := "./ascension -remote-ws"
-	targetCmd2 := "./ascension -remote-ws -token token-boys.txt"
-	targetCmd3 := "./ascension -ws-only"
-	botproc, err := findProcessByCmdline(targetCmd)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
-	bot2proc, err := findProcessByCmdline(targetCmd2)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
-	wsproc, err := findProcessByCmdline(targetCmd3)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
 
 	botcpu, botmem, err := monitorProcessUsage(botproc)
 	if err != nil {
