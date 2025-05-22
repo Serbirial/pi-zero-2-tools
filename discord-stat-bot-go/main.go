@@ -44,6 +44,14 @@ func findProcessByCmdline(targetCmd string) (*process.Process, error) {
 }
 
 func monitorProcessUsage(p *process.Process) (float64, uint64, error) {
+	// First call initializes internal state
+	_, err := p.CPUPercent()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	time.Sleep(200 * time.Millisecond) // Short delay
+
 	rawCpuPercent, err := p.CPUPercent()
 	if err != nil {
 		return 0, 0, err
