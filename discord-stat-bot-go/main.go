@@ -44,9 +44,37 @@ func findProcessByCmdline(targetCmd string) (*process.Process, error) {
 }
 
 func monitorProcessUsage(p *process.Process) (float64, uint64, error) {
-	cpuPercent, err := p.CPUPercent()
+	// First sample
+	cpuPercent1, err := p.Times()
 	if err != nil {
 		return 0, 0, err
+	}
+	// Total system CPU time at T1
+	totalCPU1, err := cpu.Times(false)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Second sample
+	cpuPercent2, err := p.Times()
+	if err != nil {
+		return 0, 0, err
+	}
+	totalCPU2, err := cpu.Times(false)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Calculate delta process CPU time
+	deltaProc := cpuPercent2.Total() - cpuPercent1.Total()
+	// Delta total CPU time (sum of all CPUs)
+	deltaTotal := totalCPU2[0].Total() - totalCPU1[0].Total()
+
+	cpuUsage := 0.0
+	if deltaTotal > 0 {
+		cpuUsage = (deltaProc / deltaTotal) * 100 * float64(runtime.NumCPU())
 	}
 
 	memInfo, err := p.MemoryInfo()
@@ -54,7 +82,7 @@ func monitorProcessUsage(p *process.Process) (float64, uint64, error) {
 		return 0, 0, err
 	}
 
-	return cpuPercent, memInfo.RSS, nil
+	return cpuUsage, memInfo.RSS, nil
 }
 
 func readToken(path string) string {
