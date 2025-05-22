@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shirou/gopsutil/process"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -21,6 +22,38 @@ var (
 	botStartTime = time.Now()
 	botUserID    string
 )
+
+func findProcessByCmdline(targetCmd string) (*process.Process, error) {
+	procs, err := process.Processes()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range procs {
+		cmdline, err := p.Cmdline()
+		if err != nil {
+			continue
+		}
+		if cmdline == targetCmd {
+			return p, nil
+		}
+	}
+	return nil, fmt.Errorf("process not found for command: %s", targetCmd)
+}
+
+func monitorProcessUsage(p *process.Process) (float64, uint64, error) {
+	cpuPercent, err := p.CPUPercent()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	memInfo, err := p.MemoryInfo()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cpuPercent, memInfo.RSS, nil
+}
 
 func readToken(path string) string {
 	data, err := os.ReadFile(path)
@@ -102,6 +135,38 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 	d, _ := disk.Usage("/")
 	uptime := time.Since(botStartTime)
 
+	targetCmd := "./ascension -remote-ws"
+	targetCmd2 := "./ascension -remote-ws -token token-boys.txt"
+	targetCmd3 := "./ascension -ws-only"
+	botproc, err := findProcessByCmdline(targetCmd)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+	bot2proc, err := findProcessByCmdline(targetCmd2)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+	wsproc, err := findProcessByCmdline(targetCmd3)
+	if err != nil {
+		fmt.Println("Process not found:", err)
+	}
+
+	botcpu, botmem, err := monitorProcessUsage(botproc)
+	if err != nil {
+		fmt.Println("Failed to monitor process:", err)
+	}
+	bot2cpu, bot2mem, err := monitorProcessUsage(bot2proc)
+	if err != nil {
+		fmt.Println("Failed to monitor process:", err)
+	}
+	wscpu, wsmem, err := monitorProcessUsage(wsproc)
+	if err != nil {
+		fmt.Println("Failed to monitor process:", err)
+	}
+
+	monitorStr := fmt.Sprintf("Music bot 1:\n		CPU: %.1f%%\n		Memory: %.2f MB\nMusic bot 2:\n		CPU: %.1f%%\n		Memory: %.2f MB\nMusic Server:\n		CPU: %.1f%%\n		Memory: %.2f MB\n",
+		botcpu, float64(botmem)/1024/1024, bot2cpu, float64(bot2mem)/1024/1024, wscpu, float64(wsmem)/1024/1024)
+
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
 	minutes := int(uptime.Minutes()) % 60
@@ -141,6 +206,11 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 			{
 				Name:   "Uptime",
 				Value:  fmt.Sprintf("I have been running for %s", uptimeStr),
+				Inline: false,
+			},
+			{
+				Name:   "Process monitoring:",
+				Value:  monitorStr,
 				Inline: false,
 			},
 		},
