@@ -43,52 +43,28 @@ func findProcessByCmdline(targetCmd string) (*process.Process, error) {
 	return nil, fmt.Errorf("process not found for command: %s", targetCmd)
 }
 
-func monitorProcessUsage(p *process.Process) (float64, uint64, error) {
-	// Get first CPU times sample for the process
-	t1, err := p.Times()
+func monitorProcessUsage(p *process.Process) (cpuPercent float64, memBytes uint64, err error) {
+	if p == nil {
+		return 0, 0, nil
+	}
+
+	// Measure CPU percent usage over 500ms
+	cpuPercentRaw, err := p.Percent(500 * time.Millisecond)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	// Get first total CPU times
-	total1, err := cpu.Times(false)
-	if err != nil || len(total1) == 0 {
-		return 0, 0, err
-	}
-
-	time.Sleep(300 * time.Millisecond)
-
-	// Get second CPU times sample for the process
-	t2, err := p.Times()
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// Get second total CPU times
-	total2, err := cpu.Times(false)
-	if err != nil || len(total2) == 0 {
-		return 0, 0, err
-	}
-
-	// Calculate deltas for process and total CPU times
-	procDelta := (t2.User + t2.System) - (t1.User + t1.System)
-	totalDelta := total2[0].Total() - total1[0].Total()
-
-	// Defensive: avoid division by zero
-	if totalDelta <= 0 {
-		return 0, 0, fmt.Errorf("invalid CPU times delta")
-	}
-
-	// Calculate CPU usage as percentage (normalized over all cores)
-	cpuPercent := (procDelta / totalDelta) * 100 * float64(runtime.NumCPU())
+	// Normalize CPU usage by number of cores
+	cpuPercent = cpuPercentRaw / float64(runtime.NumCPU())
 
 	// Get memory info
 	memInfo, err := p.MemoryInfo()
 	if err != nil {
 		return 0, 0, err
 	}
+	memBytes = memInfo.RSS
 
-	return cpuPercent, memInfo.RSS, nil
+	return cpuPercent, memBytes, nil
 }
 
 func readToken(path string) string {
