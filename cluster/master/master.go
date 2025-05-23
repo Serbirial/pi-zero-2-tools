@@ -80,7 +80,9 @@ func isWorkerOnline(addr string, port string, timeout time.Duration) bool {
 }
 
 func sendCommand(name, addr, dir, command, port string, wg *sync.WaitGroup) {
-	defer wg.Done()
+	if wg != nil {
+		defer wg.Done()
+	}
 
 	if !isWorkerOnline(addr, port, 2*time.Second) {
 		fmt.Printf("[%s] Offline or unreachable (connection failed)\n", name)
@@ -178,10 +180,14 @@ func main() {
 				dirToUse = *dirFlag
 			}
 
-			for _, cmd := range info.Cmd {
-				wg.Add(1)
-				go sendCommand(name, addr, dirToUse, cmd, *portFlag, &wg)
-			}
+			wg.Add(1)
+			go func(name, addr, dir string, cmds []string) {
+				defer wg.Done()
+				for _, cmd := range cmds {
+					sendCommand(name, addr, dir, cmd, *portFlag, nil)
+				}
+			}(name, addr, dirToUse, info.Cmd)
+
 		}
 		wg.Wait()
 	} else {
