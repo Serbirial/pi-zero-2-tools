@@ -33,6 +33,7 @@ func collectMetrics() map[string]interface{} {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
+	writer := bufio.NewWriter(conn)
 
 	usr, err := user.Current()
 	var homeDir string
@@ -49,7 +50,6 @@ func handleConnection(conn net.Conn) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err == io.EOF {
-			//log.Println("Connection closed.")
 			return
 		} else if err != nil {
 			log.Println("Read error:", err)
@@ -71,10 +71,9 @@ func handleConnection(conn net.Conn) {
 			dir = homeDir
 		}
 
-		// Parse Cmd as either []string or string
+		// Handle string or []string in "cmd"
 		var commands []string
 		if err := json.Unmarshal(req.Cmd, &commands); err != nil {
-			// Not an array, try single string
 			var singleCmd string
 			if err := json.Unmarshal(req.Cmd, &singleCmd); err != nil {
 				log.Println("Failed to parse 'cmd' field:", err)
@@ -87,8 +86,9 @@ func handleConnection(conn net.Conn) {
 			if cmdStr == "__get_metrics__" {
 				metrics := collectMetrics()
 				metricsJSON, _ := json.Marshal(metrics)
-				conn.Write(metricsJSON)
-				//conn.Write([]byte("\n"))
+				writer.Write(metricsJSON)
+				writer.WriteString("\n")
+				writer.Flush()
 				continue
 			}
 
@@ -97,13 +97,37 @@ func handleConnection(conn net.Conn) {
 			cmd := exec.Command("bash", "-c", cmdStr)
 			cmd.Dir = dir
 
-			output, err := cmd.CombinedOutput()
+			stdout, err := cmd.StdoutPipe()
 			if err != nil {
-				output = append(output, []byte("\nError: "+err.Error())...)
+				writer.WriteString("Error creating stdout pipe: " + err.Error() + "\n")
+				writer.Flush()
+				continue
+			}
+			stderr, err := cmd.StderrPipe()
+			if err != nil {
+				writer.WriteString("Error creating stderr pipe: " + err.Error() + "\n")
+				writer.Flush()
+				continue
 			}
 
-			conn.Write(output)
-			//conn.Write([]byte("\n")) // newline after output
+			if err := cmd.Start(); err != nil {
+				writer.WriteString("Error starting command: " + err.Error() + "\n")
+				writer.Flush()
+				continue
+			}
+
+			scanAndWrite := func(r io.Reader) {
+				scanner := bufio.NewScanner(r)
+				for scanner.Scan() {
+					writer.WriteString(scanner.Text() + "\n")
+				}
+			}
+
+			scanAndWrite(stdout)
+			scanAndWrite(stderr)
+
+			cmd.Wait()
+			writer.Flush()
 		}
 	}
 }

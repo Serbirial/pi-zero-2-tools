@@ -16,14 +16,12 @@ import (
 type CmdString []string
 
 func (c *CmdString) UnmarshalJSON(data []byte) error {
-	// Try unmarshaling as string
 	var single string
 	if err := json.Unmarshal(data, &single); err == nil {
 		*c = []string{single}
 		return nil
 	}
 
-	// Try unmarshaling as []string
 	var multi []string
 	if err := json.Unmarshal(data, &multi); err == nil {
 		*c = multi
@@ -79,7 +77,7 @@ func isWorkerOnline(addr string, port string, timeout time.Duration) bool {
 	return true
 }
 
-func sendCommand(name, addr, dir, command, port string, wg *sync.WaitGroup) {
+func sendCommand(name, addr, dir string, commands []string, port string, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -97,11 +95,11 @@ func sendCommand(name, addr, dir, command, port string, wg *sync.WaitGroup) {
 	defer conn.Close()
 
 	req := struct {
-		Dir string `json:"dir"`
-		Cmd string `json:"cmd"`
+		Dir string   `json:"dir"`
+		Cmd []string `json:"cmd"`
 	}{
 		Dir: dir,
-		Cmd: command,
+		Cmd: commands,
 	}
 
 	reqBytes, _ := json.Marshal(req)
@@ -140,8 +138,7 @@ func main() {
 			wg.Add(1)
 			go func(name, addr string) {
 				defer wg.Done()
-				sendCommand(name, addr, "", "__get_metrics__", *portFlag, &wg)
-
+				sendCommand(name, addr, "", []string{"__get_metrics__"}, *portFlag, nil)
 			}(name, addr)
 		}
 		wg.Wait()
@@ -164,7 +161,6 @@ func main() {
 			log.Fatalf("Failed to read workers file: %v", err)
 		}
 
-		var wg sync.WaitGroup
 		for name, info := range commands {
 			if *filter != "" && !strings.Contains(name, *filter) {
 				continue
@@ -181,13 +177,7 @@ func main() {
 			}
 
 			wg.Add(1)
-			go func(name, addr, dir string, cmds []string) {
-				defer wg.Done()
-				for _, cmd := range cmds {
-					sendCommand(name, addr, dir, cmd, *portFlag, nil)
-				}
-			}(name, addr, dirToUse, info.Cmd)
-
+			go sendCommand(name, addr, dirToUse, info.Cmd, *portFlag, &wg)
 		}
 		wg.Wait()
 	} else {
@@ -203,13 +193,12 @@ func main() {
 			log.Fatalf("Failed to read workers file: %v", err)
 		}
 
-		var wg sync.WaitGroup
 		for name, addr := range workers {
 			if *filter != "" && !strings.Contains(name, *filter) {
 				continue
 			}
 			wg.Add(1)
-			go sendCommand(name, addr, *dirFlag, command, *portFlag, &wg)
+			go sendCommand(name, addr, *dirFlag, []string{command}, *portFlag, &wg)
 		}
 		wg.Wait()
 	}
