@@ -49,7 +49,7 @@ func handleConnection(conn net.Conn) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err == io.EOF {
-			log.Println("Connection closed.")
+			//log.Println("Connection closed.")
 			return
 		} else if err != nil {
 			log.Println("Read error:", err)
@@ -88,7 +88,7 @@ func handleConnection(conn net.Conn) {
 				metrics := collectMetrics()
 				metricsJSON, _ := json.Marshal(metrics)
 				conn.Write(metricsJSON)
-				conn.Write([]byte("\n"))
+				//conn.Write([]byte("\n"))
 				continue
 			}
 
@@ -103,7 +103,7 @@ func handleConnection(conn net.Conn) {
 			}
 
 			conn.Write(output)
-			conn.Write([]byte("\n")) // newline after output
+			//conn.Write([]byte("\n")) // newline after output
 		}
 	}
 }
