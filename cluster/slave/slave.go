@@ -114,8 +114,10 @@ func handleConnection(conn net.Conn) {
 
 		// After commands, launch background binary if specified
 		if len(req.Bin) > 0 {
+
 			binCmd := exec.Command(req.Bin[0], req.Bin[1:]...)
 			binCmd.Dir = dir
+			log.Println("Launching binary from dir:", binCmd.Dir)
 
 			// Detach process and discard output completely
 			binCmd.Stdout = nil
