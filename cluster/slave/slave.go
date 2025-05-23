@@ -141,7 +141,8 @@ func handleConnection(conn net.Conn) {
 			writer.Flush()
 			return
 		}
-
+	}
+}
 
 func main() {
 	listener, err := net.Listen("tcp", ":8000")
