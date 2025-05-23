@@ -162,6 +162,7 @@ func main() {
 			log.Fatalf("Failed to read workers file: %v", err)
 		}
 
+		var wg sync.WaitGroup
 		for name, info := range commands {
 			if *filter != "" && !strings.Contains(name, *filter) {
 				continue
@@ -178,9 +179,12 @@ func main() {
 			}
 
 			for _, cmd := range info.Cmd {
-				sendCommand(name, addr, dirToUse, cmd, *portFlag, &wg)
+				wg.Add(1)
+				go sendCommand(name, addr, dirToUse, cmd, *portFlag, &wg)
+				wg.Wait()
 			}
 		}
+		wg.Wait()
 	} else {
 		if len(flag.Args()) < 2 {
 			fmt.Println("Usage: ./master workers.txt \"<command>\" [--filter name]")
