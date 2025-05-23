@@ -32,7 +32,7 @@ func (c *CmdString) UnmarshalJSON(data []byte) error {
 type CommandInfo struct {
 	Dir string    `json:"dir"`
 	Cmd CmdString `json:"cmd"`
-	Bin string    `json:"bin"`
+	Bin CmdString `json:"bin"`
 }
 
 func readWorkers(filename string) (map[string]string, error) {
@@ -76,7 +76,7 @@ func isWorkerOnline(addr string, port string, timeout time.Duration) bool {
 	return true
 }
 
-func sendCommand(name, addr, dir string, commands []string, bin, port string, wg *sync.WaitGroup) {
+func sendCommand(name, addr, dir string, commands []string, bin []string, port string, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -101,7 +101,7 @@ func sendCommand(name, addr, dir string, commands []string, bin, port string, wg
 	req := struct {
 		Dir string   `json:"dir"`
 		Cmd []string `json:"cmd"`
-		Bin string   `json:"bin,omitempty"`
+		Bin []string `json:"bin,omitempty"`
 	}{
 		Dir: dir,
 		Cmd: commands,
@@ -143,7 +143,8 @@ func main() {
 			wg.Add(1)
 			go func(name, addr string) {
 				defer wg.Done()
-				sendCommand(name, addr, "", []string{"__get_metrics__"}, "", *portFlag, nil)
+				sendCommand(name, addr, "", []string{"__get_metrics__"}, nil, *portFlag, nil)
+				sendCommand(name, addr, "", []string{"__get_metrics__"}, nil, *portFlag, nil)
 			}(name, addr)
 		}
 		wg.Wait()
@@ -204,7 +205,7 @@ func main() {
 				continue
 			}
 			wg.Add(1)
-			go sendCommand(name, addr, "", []string{command}, "", *portFlag, &wg)
+			go sendCommand(name, addr, "", []string{command}, nil, *portFlag, &wg)
 		}
 		wg.Wait()
 	}
