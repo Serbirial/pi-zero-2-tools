@@ -83,13 +83,12 @@ func handleConnection(conn net.Conn) {
 			}
 			commands = []string{singleCmd}
 		}
+		shouldExit := false
 
-		// Execute all commands in order
 		for _, cmdStr := range commands {
 			if cmdStr == "__exit__" {
-				writer.WriteString("Exiting connection.\n")
-				writer.Flush()
-				return // Close connection by exiting handler
+				shouldExit = true
+				continue
 			}
 
 			if cmdStr == "__get_metrics__" {
@@ -112,18 +111,16 @@ func handleConnection(conn net.Conn) {
 			cmd.Wait()
 		}
 
-		// After commands, launch background binary if specified
+		// Launch background binary
 		if len(req.Bin) > 0 {
-
 			binCmd := exec.Command(req.Bin[0], req.Bin[1:]...)
 			binCmd.Dir = dir
 			log.Println("Launching binary from dir:", binCmd.Dir)
 
-			// Detach process and discard output completely
+			// Detach process
 			binCmd.Stdout = nil
 			binCmd.Stderr = nil
 			binCmd.Stdin = nil
-
 			binCmd.SysProcAttr = &syscall.SysProcAttr{
 				Setsid: true,
 			}
@@ -138,8 +135,13 @@ func handleConnection(conn net.Conn) {
 			writer.Flush()
 		}
 
-	}
-}
+		// Exit connection only after everything else
+		if shouldExit {
+			writer.WriteString("Exiting connection.\n")
+			writer.Flush()
+			return
+		}
+
 
 func main() {
 	listener, err := net.Listen("tcp", ":8000")
