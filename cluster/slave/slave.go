@@ -1,4 +1,4 @@
-package slave
+package main
 
 import (
 	"bufio"
