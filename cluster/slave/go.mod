@@ -1,4 +1,4 @@
-module clustering
+module slave
 
 go 1.24.1
 
