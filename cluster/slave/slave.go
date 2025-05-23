@@ -20,7 +20,7 @@ import (
 type CommandRequest struct {
 	Dir string          `json:"dir"`
 	Cmd json.RawMessage `json:"cmd"`
-	Bin string          `json:"bin"`
+	Bin []string        `json:"bin"` // changed from string to []string
 }
 
 func collectMetrics() map[string]interface{} {
@@ -113,15 +113,8 @@ func handleConnection(conn net.Conn) {
 		}
 
 		// After commands, launch background binary if specified
-		binStr := strings.TrimSpace(req.Bin)
-		if binStr != "" {
-			args := strings.Fields(binStr)
-			if len(args) == 0 {
-				writer.WriteString("No binary specified.\n")
-				writer.Flush()
-				continue
-			}
-			binCmd := exec.Command(args[0], args[1:]...)
+		if len(req.Bin) > 0 {
+			binCmd := exec.Command(req.Bin[0], req.Bin[1:]...)
 			binCmd.Dir = dir
 
 			// Detach process and discard output completely
