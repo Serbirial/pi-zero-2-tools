@@ -76,7 +76,7 @@ func isWorkerOnline(addr string, port string, timeout time.Duration) bool {
 	return true
 }
 
-func sendCommand(name, addr, dir, command, bin, port string, wg *sync.WaitGroup) {
+func sendCommand(name, addr, dir string, commands []string, bin, port string, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -94,12 +94,12 @@ func sendCommand(name, addr, dir, command, bin, port string, wg *sync.WaitGroup)
 	defer conn.Close()
 
 	req := struct {
-		Dir string `json:"dir"`
-		Cmd string `json:"cmd"`
-		Bin string `json:"bin,omitempty"`
+		Dir string   `json:"dir"`
+		Cmd []string `json:"cmd"`
+		Bin string   `json:"bin,omitempty"`
 	}{
 		Dir: dir,
-		Cmd: command,
+		Cmd: commands,
 		Bin: bin,
 	}
 
@@ -137,7 +137,7 @@ func main() {
 			wg.Add(1)
 			go func(name, addr string) {
 				defer wg.Done()
-				sendCommand(name, addr, "", "__get_metrics__", "", *portFlag, nil)
+				sendCommand(name, addr, "", []string{"__get_metrics__"}, "", *portFlag, nil)
 			}(name, addr)
 		}
 		wg.Wait()
@@ -176,19 +176,7 @@ func main() {
 			}
 
 			wg.Add(1)
-			go func(name, addr, dir string, cmds []string, bin string) {
-				defer wg.Done()
-
-				// Send all commands in order, one by one
-				for _, cmd := range cmds {
-					sendCommand(name, addr, dir, cmd, "", *portFlag, nil)
-				}
-
-				// After all commands, send the binary command once if specified
-				if bin != "" {
-					sendCommand(name, addr, dir, "", bin, *portFlag, nil)
-				}
-			}(name, addr, dirToUse, info.Cmd, info.Bin)
+			go sendCommand(name, addr, dirToUse, info.Cmd, info.Bin, *portFlag, &wg)
 		}
 
 		wg.Wait()
@@ -210,7 +198,7 @@ func main() {
 				continue
 			}
 			wg.Add(1)
-			go sendCommand(name, addr, *dirFlag, command, "", *portFlag, &wg)
+			go sendCommand(name, addr, "", []string{command}, "", *portFlag, &wg)
 		}
 		wg.Wait()
 	}
