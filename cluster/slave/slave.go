@@ -103,6 +103,7 @@ func handleConnection(conn net.Conn) {
 			}
 			writer.Write(output)
 			writer.Flush()
+			cmd.Wait()
 		}
 
 		// After commands, launch background binary if specified
