@@ -10,11 +10,24 @@ import (
 	"os/exec"
 	"os/user"
 	"strings"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type CommandRequest struct {
 	Dir string          `json:"dir"`
 	Cmd json.RawMessage `json:"cmd"`
+}
+
+func collectMetrics() map[string]interface{} {
+	cpuPercent, _ := cpu.Percent(0, false)
+	vmStat, _ := mem.VirtualMemory()
+	return map[string]interface{}{
+		"cpu_percent": cpuPercent,
+		"mem_total":   vmStat.Total,
+		"mem_used":    vmStat.Used,
+	}
 }
 
 func handleConnection(conn net.Conn) {
@@ -71,6 +84,14 @@ func handleConnection(conn net.Conn) {
 		}
 
 		for _, cmdStr := range commands {
+			if cmdStr == "__get_metrics__" {
+				metrics := collectMetrics()
+				metricsJSON, _ := json.Marshal(metrics)
+				conn.Write(metricsJSON)
+				conn.Write([]byte("\n"))
+				continue
+			}
+
 			log.Printf("Executing command in dir '%s': %s\n", dir, cmdStr)
 
 			cmd := exec.Command("bash", "-c", cmdStr)
