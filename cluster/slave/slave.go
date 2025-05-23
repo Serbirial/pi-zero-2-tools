@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -18,6 +20,7 @@ import (
 type CommandRequest struct {
 	Dir string          `json:"dir"`
 	Cmd json.RawMessage `json:"cmd"`
+	Bin string          `json:"bin"`
 }
 
 func collectMetrics() map[string]interface{} {
@@ -71,7 +74,6 @@ func handleConnection(conn net.Conn) {
 			dir = homeDir
 		}
 
-		// Handle string or []string in "cmd"
 		var commands []string
 		if err := json.Unmarshal(req.Cmd, &commands); err != nil {
 			var singleCmd string
@@ -87,46 +89,42 @@ func handleConnection(conn net.Conn) {
 				metrics := collectMetrics()
 				metricsJSON, _ := json.Marshal(metrics)
 				writer.Write(metricsJSON)
-				writer.WriteString("\n")
 				writer.Flush()
 				continue
 			}
 
 			log.Printf("Executing command in dir '%s': %s\n", dir, cmdStr)
-
 			cmd := exec.Command("bash", "-c", cmdStr)
 			cmd.Dir = dir
-
-			stdout, err := cmd.StdoutPipe()
+			output, err := cmd.CombinedOutput()
 			if err != nil {
-				writer.WriteString("Error creating stdout pipe: " + err.Error() + "\n")
+				output = append(output, []byte("\nError: "+err.Error())...)
+			}
+			writer.Write(output)
+			writer.Flush()
+		}
+
+		if strings.TrimSpace(req.Bin) != "" {
+			args := strings.Fields(req.Bin)
+			if len(args) == 0 {
+				writer.WriteString("No binary specified.\n")
 				writer.Flush()
 				continue
 			}
-			stderr, err := cmd.StderrPipe()
+			binCmd := exec.Command(args[0], args[1:]...)
+			binCmd.Dir = dir
+			binCmd.Stdout = os.Stdout
+			binCmd.Stderr = os.Stderr
+			binCmd.Stdin = nil
+			binCmd.SysProcAttr = &syscall.SysProcAttr{
+				Setsid: true,
+			}
+			err := binCmd.Start()
 			if err != nil {
-				writer.WriteString("Error creating stderr pipe: " + err.Error() + "\n")
-				writer.Flush()
-				continue
+				writer.WriteString("Error launching binary: " + err.Error() + "\n")
+			} else {
+				writer.WriteString("Binary launched in background: PID " + strconv.Itoa(binCmd.Process.Pid) + "\n")
 			}
-
-			if err := cmd.Start(); err != nil {
-				writer.WriteString("Error starting command: " + err.Error() + "\n")
-				writer.Flush()
-				continue
-			}
-
-			scanAndWrite := func(r io.Reader) {
-				scanner := bufio.NewScanner(r)
-				for scanner.Scan() {
-					writer.WriteString(scanner.Text() + "\n")
-				}
-			}
-
-			scanAndWrite(stdout)
-			scanAndWrite(stderr)
-
-			cmd.Wait()
 			writer.Flush()
 		}
 	}
