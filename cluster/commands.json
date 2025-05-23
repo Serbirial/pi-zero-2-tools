@@ -1,0 +1,6 @@
+{
+  "PiWorker2": {
+    "dir": "/home/summers/ascension-go",
+    "cmd": ["git pull", "go build"]
+  }
+}

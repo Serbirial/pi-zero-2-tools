@@ -13,6 +13,31 @@ import (
 	"time"
 )
 
+type CmdString []string
+
+func (c *CmdString) UnmarshalJSON(data []byte) error {
+	// Try unmarshaling as string
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*c = []string{single}
+		return nil
+	}
+
+	// Try unmarshaling as []string
+	var multi []string
+	if err := json.Unmarshal(data, &multi); err == nil {
+		*c = multi
+		return nil
+	}
+
+	return fmt.Errorf("cmd is not string or []string")
+}
+
+type CommandInfo struct {
+	Dir string    `json:"dir"`
+	Cmd CmdString `json:"cmd"`
+}
+
 func readWorkers(filename string) (map[string]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -35,18 +60,18 @@ func readWorkers(filename string) (map[string]string, error) {
 	return workers, scanner.Err()
 }
 
-func readCommandsJSON(path string) (map[string]string, error) {
+func readCommandsJSON(path string) (map[string]CommandInfo, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var commands map[string]string
+	var commands map[string]CommandInfo
 	err = json.Unmarshal(data, &commands)
 	return commands, err
 }
 
-func isWorkerOnline(addr string) bool {
-	conn, err := net.DialTimeout("tcp", addr+":8000", 2*time.Second)
+func isWorkerOnline(addr string, port string, timeout time.Duration) bool {
+	conn, err := net.DialTimeout("tcp", addr+":"+port, timeout)
 	if err != nil {
 		return false
 	}
@@ -54,22 +79,31 @@ func isWorkerOnline(addr string) bool {
 	return true
 }
 
-func sendCommand(name, addr, command string, wg *sync.WaitGroup) {
+func sendCommand(name, addr, dir, command, port string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	if !isWorkerOnline(addr) {
-		fmt.Printf("[%s] ❌ Offline or unreachable (connection failed)\n", name)
+	if !isWorkerOnline(addr, port, 2*time.Second) {
+		fmt.Printf("[%s] Offline or unreachable (connection failed)\n", name)
 		return
 	}
 
-	conn, err := net.Dial("tcp", addr+":8000")
+	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
 		fmt.Printf("[%s] Connection error: %v\n", name, err)
 		return
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte(command + "\n"))
+	req := struct {
+		Dir string `json:"dir"`
+		Cmd string `json:"cmd"`
+	}{
+		Dir: dir,
+		Cmd: command,
+	}
+
+	reqBytes, _ := json.Marshal(req)
+	_, err = conn.Write(append(reqBytes, '\n'))
 	if err != nil {
 		fmt.Printf("[%s] Failed to send command: %v\n", name, err)
 		return
@@ -85,6 +119,8 @@ func sendCommand(name, addr, command string, wg *sync.WaitGroup) {
 func main() {
 	jsonMode := flag.Bool("json", false, "Read per-worker commands from commands.json")
 	filter := flag.String("filter", "", "Only target workers whose name includes this string")
+	dirFlag := flag.String("dir", "", "Default directory to run command in on workers (if not overridden per-worker)")
+	portFlag := flag.String("port", "8000", "Port to connect to workers on")
 	flag.Parse()
 
 	if *jsonMode {
@@ -93,6 +129,7 @@ func main() {
 			return
 		}
 		workerFile := flag.Arg(0)
+
 		commands, err := readCommandsJSON("commands.json")
 		if err != nil {
 			log.Fatalf("Failed to read commands.json: %v", err)
@@ -103,7 +140,7 @@ func main() {
 		}
 
 		var wg sync.WaitGroup
-		for name, command := range commands {
+		for name, info := range commands {
 			if *filter != "" && !strings.Contains(name, *filter) {
 				continue
 			}
@@ -112,8 +149,16 @@ func main() {
 				fmt.Printf("[WARN] No address found for worker '%s', skipping\n", name)
 				continue
 			}
-			wg.Add(1)
-			go sendCommand(name, addr, command, &wg)
+
+			dirToUse := info.Dir
+			if dirToUse == "" {
+				dirToUse = *dirFlag
+			}
+
+			for _, cmd := range info.Cmd {
+				wg.Add(1)
+				go sendCommand(name, addr, dirToUse, cmd, *portFlag, &wg)
+			}
 		}
 		wg.Wait()
 	} else {
@@ -135,7 +180,7 @@ func main() {
 				continue
 			}
 			wg.Add(1)
-			go sendCommand(name, addr, command, &wg)
+			go sendCommand(name, addr, *dirFlag, command, *portFlag, &wg)
 		}
 		wg.Wait()
 	}
