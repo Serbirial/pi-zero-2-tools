@@ -178,14 +178,19 @@ func main() {
 			wg.Add(1)
 			go func(name, addr, dir string, cmds []string, bin string) {
 				defer wg.Done()
+
+				// Send all commands in order, one by one
 				for _, cmd := range cmds {
 					sendCommand(name, addr, dir, cmd, "", *portFlag, nil)
 				}
+
+				// After all commands, send the binary command once if specified
 				if bin != "" {
 					sendCommand(name, addr, dir, "", bin, *portFlag, nil)
 				}
 			}(name, addr, dirToUse, info.Cmd, info.Bin)
 		}
+
 		wg.Wait()
 	} else {
 		if len(flag.Args()) < 2 {

@@ -84,6 +84,7 @@ func handleConnection(conn net.Conn) {
 			commands = []string{singleCmd}
 		}
 
+		// Execute all commands in order
 		for _, cmdStr := range commands {
 			if cmdStr == "__get_metrics__" {
 				metrics := collectMetrics()
@@ -104,8 +105,10 @@ func handleConnection(conn net.Conn) {
 			writer.Flush()
 		}
 
-		if strings.TrimSpace(req.Bin) != "" {
-			args := strings.Fields(req.Bin)
+		// After commands, launch background binary if specified
+		binStr := strings.TrimSpace(req.Bin)
+		if binStr != "" {
+			args := strings.Fields(binStr)
 			if len(args) == 0 {
 				writer.WriteString("No binary specified.\n")
 				writer.Flush()
@@ -113,20 +116,26 @@ func handleConnection(conn net.Conn) {
 			}
 			binCmd := exec.Command(args[0], args[1:]...)
 			binCmd.Dir = dir
-			binCmd.Stdout = os.Stdout
-			binCmd.Stderr = os.Stderr
+
+			// Detach process and discard output completely
+			binCmd.Stdout = nil
+			binCmd.Stderr = nil
 			binCmd.Stdin = nil
+
 			binCmd.SysProcAttr = &syscall.SysProcAttr{
 				Setsid: true,
 			}
+
 			err := binCmd.Start()
 			if err != nil {
 				writer.WriteString("Error launching binary: " + err.Error() + "\n")
 			} else {
 				writer.WriteString("Binary launched in background: PID " + strconv.Itoa(binCmd.Process.Pid) + "\n")
 			}
+			writer.WriteByte('\n')
 			writer.Flush()
 		}
+
 	}
 }
 
