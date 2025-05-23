@@ -181,7 +181,6 @@ func main() {
 			for _, cmd := range info.Cmd {
 				wg.Add(1)
 				go sendCommand(name, addr, dirToUse, cmd, *portFlag, &wg)
-				wg.Wait()
 			}
 		}
 		wg.Wait()
