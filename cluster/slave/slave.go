@@ -86,6 +86,12 @@ func handleConnection(conn net.Conn) {
 
 		// Execute all commands in order
 		for _, cmdStr := range commands {
+			if cmdStr == "__exit__" {
+				writer.WriteString("Exiting connection.\n")
+				writer.Flush()
+				return // Close connection by exiting handler
+			}
+
 			if cmdStr == "__get_metrics__" {
 				metrics := collectMetrics()
 				metricsJSON, _ := json.Marshal(metrics)

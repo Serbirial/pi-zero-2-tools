@@ -89,9 +89,14 @@ func sendCommand(name, addr, dir string, commands []string, bin, port string, wg
 	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
 		fmt.Printf("[%s] Connection error: %v\n", name, err)
+		conn.Close()
 		return
 	}
-	defer conn.Close()
+
+	// Append __exit__ to commands to tell worker to close connection cleanly
+	if len(commands) == 0 || commands[len(commands)-1] != "__exit__" {
+		commands = append(commands, "__exit__")
+	}
 
 	req := struct {
 		Dir string   `json:"dir"`
@@ -107,6 +112,7 @@ func sendCommand(name, addr, dir string, commands []string, bin, port string, wg
 	_, err = conn.Write(append(reqBytes, '\n'))
 	if err != nil {
 		fmt.Printf("[%s] Failed to send command: %v\n", name, err)
+		conn.Close()
 		return
 	}
 
