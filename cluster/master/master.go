@@ -144,7 +144,6 @@ func main() {
 			go func(name, addr string) {
 				defer wg.Done()
 				sendCommand(name, addr, "", []string{"__get_metrics__"}, nil, *portFlag, nil)
-				sendCommand(name, addr, "", []string{"__get_metrics__"}, nil, *portFlag, nil)
 			}(name, addr)
 		}
 		wg.Wait()
