@@ -153,7 +153,7 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		fmt.Println("Failed to fetch remote stats:", err)
 		statsWorker1 = make(RemoteProcStats) // avoid nil map
 	}
-	statsWorker2, err := fetchRemoteStats("http://192.168.0.8:8000") // FIXME grab all known nodes from the workers.txt file
+	statsWorker2, err := fetchRemoteStats("192.168.0.8:8000") // FIXME grab all known nodes from the workers.txt file
 	if err != nil {
 		fmt.Println("Failed to fetch remote stats:", err)
 		statsWorker2 = make(RemoteProcStats) // avoid nil map
