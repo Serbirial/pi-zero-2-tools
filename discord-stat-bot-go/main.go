@@ -181,7 +181,7 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		statsWorker2 = make(RemoteProcStats) // avoid nil map
 	}
 
-	monitorStr := "```" + formatStats("Music Bot 1", statsWorker1) + "\n" + formatStats("Music Server", statsWorker2) + "```"
+	monitorStr := "```" + formatStats("Worker 1", statsWorker1) + "\n" + formatStats("Worker 2", statsWorker2) + "```"
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
