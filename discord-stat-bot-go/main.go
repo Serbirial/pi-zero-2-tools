@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,7 +40,6 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 	}
 	defer conn.Close()
 
-	// Send request using the same structure as in RCO/master/master.go
 	req := struct {
 		Dir string   `json:"dir"`
 		Cmd []string `json:"cmd"`
@@ -58,14 +58,20 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 
 	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 	respBytes, err := io.ReadAll(conn)
-	fmt.Println("RAW RESPONSE:", string(respBytes)) // <-- Debug line
-
 	if err != nil {
 		return nil, fmt.Errorf("read error: %w", err)
 	}
+	fmt.Println("RAW RESPONSE:", string(respBytes)) // Debug
+
+	start := bytes.IndexByte(respBytes, '{')
+	end := bytes.LastIndexByte(respBytes, '}')
+	if start == -1 || end == -1 || start > end {
+		return nil, fmt.Errorf("no valid JSON object found in response")
+	}
+	cleanJSON := respBytes[start : end+1]
 
 	var stats RemoteProcStats
-	if err := json.Unmarshal(respBytes, &stats); err != nil {
+	if err := json.Unmarshal(cleanJSON, &stats); err != nil {
 		return nil, fmt.Errorf("unmarshal error: %w", err)
 	}
 	return stats, nil
