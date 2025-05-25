@@ -44,7 +44,7 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 		Bin []string `json:"bin,omitempty"`
 	}{
 		Dir: "",
-		Cmd: []string{"__get_metrics__", "__exit__"},
+		Cmd: []string{"__get_procs__", "__exit__"},
 		Bin: nil,
 	}
 
