@@ -37,14 +37,15 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 	}
 	defer conn.Close()
 
+	// Send request using the same structure as in RCO/master/master.go
 	req := struct {
 		Dir string   `json:"dir"`
 		Cmd []string `json:"cmd"`
 		Bin []string `json:"bin,omitempty"`
 	}{
-		Dir: "/home/summers/",
+		Dir: "",
 		Cmd: []string{"__get_metrics__", "__exit__"},
-		Bin: []string{""},
+		Bin: nil,
 	}
 
 	reqBytes, _ := json.Marshal(req)
