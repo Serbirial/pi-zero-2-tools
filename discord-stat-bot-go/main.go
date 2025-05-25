@@ -58,6 +58,8 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 
 	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 	respBytes, err := io.ReadAll(conn)
+	fmt.Println("RAW RESPONSE:", string(respBytes)) // <-- Debug line
+
 	if err != nil {
 		return nil, fmt.Errorf("read error: %w", err)
 	}
