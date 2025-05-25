@@ -1,14 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/shirou/gopsutil/process"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -23,48 +25,34 @@ var (
 	botUserID    string
 )
 
-var botproc, bot2proc, wsproc *process.Process
-
-func findProcessByCmdline(targetCmd string) (*process.Process, error) {
-	procs, err := process.Processes()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range procs {
-		cmdline, err := p.Cmdline()
-		if err != nil {
-			continue
-		}
-		if cmdline == targetCmd {
-			return p, nil
-		}
-	}
-	return nil, fmt.Errorf("process not found for command: %s", targetCmd)
+type RemoteProcStats map[string]struct {
+	CPU float64 `json:"cpu"`
+	Mem uint64  `json:"mem"`
 }
 
-func monitorProcessUsage(p *process.Process) (cpuPercent float64, memBytes uint64, err error) {
-	if p == nil {
-		return 0, 0, nil
-	}
-
-	// Measure CPU percent usage over 500ms
-	cpuPercentRaw, err := p.Percent(500 * time.Millisecond)
+func fetchRemoteStats(addr string) (RemoteProcStats, error) {
+	conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 	if err != nil {
-		return 0, 0, err
+		return nil, fmt.Errorf("dial error: %w", err)
 	}
+	defer conn.Close()
 
-	// Normalize CPU usage by number of cores
-	cpuPercent = cpuPercentRaw / float64(runtime.NumCPU())
-
-	// Get memory info
-	memInfo, err := p.MemoryInfo()
+	_, err = conn.Write([]byte("__get_procs__\n"))
 	if err != nil {
-		return 0, 0, err
+		return nil, fmt.Errorf("write error: %w", err)
 	}
-	memBytes = memInfo.RSS
 
-	return cpuPercent, memBytes, nil
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	respBytes, err := io.ReadAll(conn)
+	if err != nil {
+		return nil, fmt.Errorf("read error: %w", err)
+	}
+
+	var stats RemoteProcStats
+	if err := json.Unmarshal(respBytes, &stats); err != nil {
+		return nil, fmt.Errorf("unmarshal error: %w", err)
+	}
+	return stats, nil
 }
 
 func readToken(path string) string {
@@ -97,23 +85,7 @@ func onReady(s *discordgo.Session, r *discordgo.Ready) {
 	botUserID = r.User.ID
 	fmt.Printf("Logged in as: %s#%s\n", r.User.Username, r.User.Discriminator)
 
-	// Cache the processes
-	targetCmd := "./ascension -remote-ws"
-	targetCmd2 := "./ascension -remote-ws -token token-boys.txt"
-	targetCmd3 := "./ascension -ws-only"
 	var err error
-	botproc, err = findProcessByCmdline(targetCmd)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
-	bot2proc, err = findProcessByCmdline(targetCmd2)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
-	wsproc, err = findProcessByCmdline(targetCmd3)
-	if err != nil {
-		fmt.Println("Process not found:", err)
-	}
 
 	// Attempt to find existing stats message
 	messages, err := s.ChannelMessages(ChannelID, 10, "", "", "")
@@ -165,23 +137,20 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 	d, _ := disk.Usage("/")
 	uptime := time.Since(botStartTime)
 
-	botcpu, botmem, err := monitorProcessUsage(botproc)
+	statsWorker1, err := fetchRemoteStats("localhost:8000") // FIXME grab all known nodes from the workers.txt file
 	if err != nil {
-		fmt.Println("Failed to monitor process:", err)
+		fmt.Println("Failed to fetch remote stats:", err)
+		statsWorker1 = make(RemoteProcStats) // avoid nil map
 	}
-	bot2cpu, bot2mem, err := monitorProcessUsage(bot2proc)
+	statsWorker2, err := fetchRemoteStats("192.168.0.8:8000") // FIXME grab all known nodes from the workers.txt file
 	if err != nil {
-		fmt.Println("Failed to monitor process:", err)
-	}
-	wscpu, wsmem, err := monitorProcessUsage(wsproc)
-	if err != nil {
-		fmt.Println("Failed to monitor process:", err)
+		fmt.Println("Failed to fetch remote stats:", err)
+		statsWorker1 = make(RemoteProcStats) // avoid nil map
 	}
 
-	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic bot 2:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
-		botcpu, float64(botmem)/1024/1024,
-		bot2cpu, float64(bot2mem)/1024/1024,
-		wscpu, float64(wsmem)/1024/1024)
+	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
+		statsWorker1["ascension-bot"].CPU, float64(statsWorker1["music-bot"].Mem)/1024/1024,
+		statsWorker2["ascension-ws"].CPU, float64(statsWorker2["music-bot-2"].Mem)/1024/1024)
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
