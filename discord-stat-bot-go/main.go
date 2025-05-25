@@ -127,7 +127,7 @@ func onReady(s *discordgo.Session, r *discordgo.Ready) {
 }
 
 func statsLoop(s *discordgo.Session) {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	for {
