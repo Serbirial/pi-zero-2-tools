@@ -152,6 +152,17 @@ func statsLoop(s *discordgo.Session) {
 		}
 	}
 }
+func formatStats(title string, stats RemoteProcStats) string {
+	out := title + ":\n"
+	for group, entries := range stats {
+		for _, entry := range entries {
+			out += "  [" + group + "]\n"
+			out += fmt.Sprintf("    CPU: %.2f%%\n", entry.CPUTime)
+			out += fmt.Sprintf("    Memory: %.2f MB\n", entry.RSSMB)
+		}
+	}
+	return out
+}
 
 func buildStatsEmbed() *discordgo.MessageEmbed {
 	v, _ := mem.VirtualMemory()
@@ -170,9 +181,7 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		statsWorker2 = make(RemoteProcStats) // avoid nil map
 	}
 
-	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
-		statsWorker1["ascension-bot"].CPUTime, float64(statsWorker1["music-bot"].RSSMB),
-		statsWorker2["ascension-ws"].CPUTime, float64(statsWorker2["music-bot-2"].RSSMB))
+	monitorStr := "```" + formatStats("Music Bot 1", statsWorker1) + "\n" + formatStats("Music Server", statsWorker2) + "```"
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
