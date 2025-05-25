@@ -61,7 +61,6 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read error: %w", err)
 	}
-	fmt.Println("RAW RESPONSE:", string(respBytes)) // Debug
 
 	start := bytes.IndexByte(respBytes, '{')
 	end := bytes.LastIndexByte(respBytes, '}')
