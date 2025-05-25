@@ -26,7 +26,7 @@ var (
 	botUserID    string
 )
 
-type RemoteProcStats map[string]struct {
+type RemoteProcStats map[string][]struct {
 	PID     string  `json:"pid"`
 	Command string  `json:"command"`
 	RSSMB   float64 `json:"rss_mb"`
