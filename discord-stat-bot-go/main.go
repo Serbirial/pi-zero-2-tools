@@ -37,12 +37,23 @@ func fetchRemoteStats(addr string) (RemoteProcStats, error) {
 	}
 	defer conn.Close()
 
-	_, err = conn.Write([]byte("__get_procs__\n"))
+	req := struct {
+		Dir string   `json:"dir"`
+		Cmd []string `json:"cmd"`
+		Bin []string `json:"bin,omitempty"`
+	}{
+		Dir: "/home/summers/",
+		Cmd: []string{"__get_metrics__", "__exit__"},
+		Bin: []string{""},
+	}
+
+	reqBytes, _ := json.Marshal(req)
+	_, err = conn.Write(append(reqBytes, '\n'))
 	if err != nil {
 		return nil, fmt.Errorf("write error: %w", err)
 	}
 
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 	respBytes, err := io.ReadAll(conn)
 	if err != nil {
 		return nil, fmt.Errorf("read error: %w", err)
@@ -142,10 +153,10 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		fmt.Println("Failed to fetch remote stats:", err)
 		statsWorker1 = make(RemoteProcStats) // avoid nil map
 	}
-	statsWorker2, err := fetchRemoteStats("192.168.0.8:8000") // FIXME grab all known nodes from the workers.txt file
+	statsWorker2, err := fetchRemoteStats("http://192.168.0.8:8000") // FIXME grab all known nodes from the workers.txt file
 	if err != nil {
 		fmt.Println("Failed to fetch remote stats:", err)
-		statsWorker1 = make(RemoteProcStats) // avoid nil map
+		statsWorker2 = make(RemoteProcStats) // avoid nil map
 	}
 
 	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
