@@ -163,8 +163,8 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 	}
 
 	monitorStr := fmt.Sprintf("```Music bot 1:\n  CPU: %.1f%%\n  Memory: %.2f MB\n\nMusic Server:\n  CPU: %.1f%%\n  Memory: %.2f MB```",
-		statsWorker1["ascension-bot"].CPU, float64(statsWorker1["music-bot"].Mem)/1024/1024,
-		statsWorker2["ascension-ws"].CPU, float64(statsWorker2["music-bot-2"].Mem)/1024/1024)
+		statsWorker1["ascension-bot"].CPUTime, float64(statsWorker1["music-bot"].RSSMB),
+		statsWorker2["ascension-ws"].CPUTime, float64(statsWorker2["music-bot-2"].RSSMB))
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
