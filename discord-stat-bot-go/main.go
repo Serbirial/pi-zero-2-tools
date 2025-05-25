@@ -191,7 +191,7 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "Bot stats",
-		Description: "System stats updated every 5 seconds",
+		Description: "System stats updated every 10 seconds",
 		Color:       0x00ffcc,
 		Fields: []*discordgo.MessageEmbedField{
 			{
