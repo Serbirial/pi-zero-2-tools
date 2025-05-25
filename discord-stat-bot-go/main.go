@@ -27,10 +27,11 @@ var (
 )
 
 type RemoteProcStats map[string][]struct {
-	PID     string  `json:"pid"`
-	Command string  `json:"command"`
-	RSSMB   float64 `json:"rss_mb"`
-	CPUTime float64 `json:"cpu_time"`
+	PID        string  `json:"pid"`
+	Command    string  `json:"command"`
+	RSSMB      float64 `json:"rss_mb"`
+	CPUTime    float64 `json:"cpu_time"`
+	CPUPercent float64 `json:"cpu_percent"`
 }
 
 func fetchRemoteStats(addr string) (RemoteProcStats, error) {
