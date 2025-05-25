@@ -157,7 +157,7 @@ func formatStats(title string, stats RemoteProcStats) string {
 	for group, entries := range stats {
 		for _, entry := range entries {
 			out += "  [" + group + "]\n"
-			out += fmt.Sprintf("    CPU: %.2f%%\n", entry.CPUTime)
+			out += fmt.Sprintf("    CPU: %.2f%%\n", entry.CPUPercent)
 			out += fmt.Sprintf("    Memory: %.2f MB\n", entry.RSSMB)
 		}
 	}
