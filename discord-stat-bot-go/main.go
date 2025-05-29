@@ -180,8 +180,13 @@ func buildStatsEmbed() *discordgo.MessageEmbed {
 		fmt.Println("Failed to fetch remote stats:", err)
 		statsWorker2 = make(RemoteProcStats) // avoid nil map
 	}
+	statsWorker3, err := fetchRemoteStats("192.168.0.9:8000") // FIXME grab all known nodes from the workers.txt file
+	if err != nil {
+		fmt.Println("Failed to fetch remote stats:", err)
+		statsWorker3 = make(RemoteProcStats) // avoid nil map
+	}
 
-	monitorStr := "```" + formatStats("Worker 1", statsWorker1) + "\n" + formatStats("Worker 2", statsWorker2) + "```"
+	monitorStr := "```" + formatStats("Worker 1", statsWorker1) + "\n" + formatStats("Worker 2", statsWorker2) + "\n" + formatStats("Worker 3", statsWorker3) + "```"
 
 	days := int(uptime.Hours()) / 24
 	hours := int(uptime.Hours()) % 24
